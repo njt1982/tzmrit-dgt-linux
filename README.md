@@ -55,25 +55,25 @@ sudo uv run python3 tzmrit_daemon.py
 To configure this script to boot up automatically when your computer powers on without tying up an active terminal shell window, use the included Systemd service file wrapper:
 
 1. Copy your repository workspace to a permanent system location:
-   ```bash
- sudo cp -r . /usr/local/bin/tzmrit-dgt-linux
-   ```
+```bash
+sudo cp -r . /usr/local/bin/tzmrit-dgt-linux
+```
 
 2. Link the template service manager script configuration file:
-   ```bash
- sudo cp /usr/local/bin/tzmrit-dgt-linux/tzmrit-daemon.service /etc/systemd/system/
-   ```
+```bash
+sudo cp /usr/local/bin/tzmrit-dgt-linux/tzmrit-daemon.service /etc/systemd/system/
+```
 
 3. Refresh system configurations and turn the daemon engine on:
-   ```bash
- sudo systemctl daemon-reload
- sudo systemctl enable --now tzmrit-daemon.service
-   ```
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now tzmrit-daemon.service
+```
 
 4. Verify the active telemetry loop status:
-   ```bash
- sudo systemctl status tzmrit-daemon.service
-   ```
+```bash
+sudo systemctl status tzmrit-daemon.service
+```
 
 ---
 
@@ -81,13 +81,15 @@ To configure this script to boot up automatically when your computer powers on w
 
 ### Screen remains on 00 or displays a static figure
 1. Terminate your active tasks or service blocks:
-   ```bash
- sudo systemctl stop tzmrit-daemon.service
-   ```
+```bash
+sudo systemctl stop tzmrit-daemon.service
+```
+
 2. Run an active hardware link check via Python to ensure your motherboard header claims it correctly:
-   ```bash
- sudo uv run --with hidapi python3 -c "import hid; print([d for d in hid.enumerate(0x1a2c, 0x4184)])"
-   ```
+```bash
+sudo uv run --with hidapi python3 -c "import hid; print([d for d in hid.enumerate(0x1a2c, 0x4184)])"
+```
+
 3. Ensure no secondary virtual machine software instances (like VirtualBox or QEMU/KVM configs) have an active pass-through rule claiming the `1a2c:4184` device identity.
 
 ### Sensor Not Found error loops
