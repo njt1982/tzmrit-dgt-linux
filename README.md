@@ -9,7 +9,7 @@ A Python-based telemetry daemon for controlling the 7-segment digital LED temper
 ```
 ID 1a2c:4184 China Resource Semico Co., Ltd USB Gaming Keyboard
 ```
-i- **Use at Your Own Risk**: While this script is designed to safely execute standard system read-and-pipe telemetry loops, use it at your own discretion.
+- **Use at Your Own Risk**: While this script is designed to safely execute standard system read-and-pipe telemetry loops, use it at your own discretion.
 - **Community Contribution**: This is an independent, community-created solution. It is not officially supported, endorsed, or certified by TZMRIT or Jungle Leopard.
 
 ## 🚀 Features
