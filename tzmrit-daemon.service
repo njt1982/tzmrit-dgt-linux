@@ -1,0 +1,15 @@
+[Unit]
+Description=TZMRIT USB Display Temperature Daemon
+After=multi-user.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/bin/tzmrit-dgt-linux
+ExecStart=/usr/local/bin/uv run python3 tzmrit_daemon.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

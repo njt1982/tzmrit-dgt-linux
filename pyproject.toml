@@ -1,0 +1,14 @@
+[project]
+name = "tzmrit-dgt-linux"
+version = "1.0.0"
+description = "Native Linux background telemetry daemon for TZMRIT / Jungle Leopard KF620 DGT screen displays"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "hidapi>=0.14.0",
+    "psutil>=6.0.0",
+]
+
+[project.scripts]
+tzmrit-daemon = "tzmrit_daemon:main"
+
