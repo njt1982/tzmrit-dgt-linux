@@ -59,7 +59,16 @@ def main():
                 device.send_feature_report(payload)
                 time.sleep(1.0)
                 
-        except (hid.HIDException, IOError) as err:
+        except (Exception, IOError) as err:
+            # Handle KeyboardInterrupt gracefully so it skips the retry sleep
+            if isinstance(err, KeyboardInterrupt):
+                print("\n[+] Gracefully shutting down telemetry thread loops.")
+                try:
+                    device.close()
+                except Exception:
+                    pass
+                break
+
             print(f"[-] Connection dropped ({err}). Attempting to recover link...", file=sys.stderr)
             time.sleep(2.0)
         except KeyboardInterrupt:
