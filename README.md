@@ -37,7 +37,7 @@ curl -LsSf https://astral.sh | sh
 ### 2. Clone and Setup the Workspace
 Clone this repository to your computer and navigate into the target folder path:
 ```bash
-git clone https://github.com
+git clone https://github.com/njt1982/tzmrit-dgt-linux.git
 cd tzmrit-dgt-linux
 ```
 
