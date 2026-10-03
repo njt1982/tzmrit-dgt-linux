@@ -1,111 +1,64 @@
-# TZMRIT / Jungle Leopard KF620 DGT LCD Driver for Linux
+# TZMRIT / Jungle Leopard KF620 DGT display for Linux
 
-A Python-based telemetry daemon for controlling the 7-segment digital LED temperature display on **TZMRIT / Jungle Leopard KF620 DGT** coolers in Linux environments (including Proxmox, Debian, and Ubuntu).
+A small Python daemon that sends CPU temperatures to the USB temperature panel on a TZMRIT / Jungle Leopard KF620 DGT cooler. This is an independent project, not endorsed by the manufacturer.
 
-## ⚠️ Important Disclaimers
+## Verified behavior
 
-- **Hardware Compatibility**: This project was reverse-engineered specifically for the **TZMRIT / Jungle Leopard KF620 DGT** series cooler. 
-- **Factory Profile**: The electronic panel controller identifies in `lsusb` as a generic keyboard layout spoofing device under the manufacturer profile:
-```
-ID 1a2c:4184 China Resource Semico Co., Ltd USB Gaming Keyboard
-```
-- **Use at Your Own Risk**: While this script is designed to safely execute standard system read-and-pipe telemetry loops, use it at your own discretion.
-- **Community Contribution**: This is an independent, community-created solution. It is not officially supported, endorsed, or certified by TZMRIT or Jungle Leopard.
+The working panel identifies as `1a2c:4184` (SEMICO USB Gaming Keyboard). The daemon selects interface 1. Its HID descriptor defines feature report 7 with 63 data bytes: **64 bytes total including the report ID**.
 
-## 🚀 Features
+The tested temperature message begins with `[7, 255, 255, hundreds, tens, ones]` and is padded with zeros. The three temperature bytes are individual decimal digits, truncated to whole degrees. This message has been verified on the project's Ubuntu host; other hardware revisions and operating systems have not been established as compatible. The full vendor protocol, including an unavailable/blank display command, is not known.
 
-- **Native Linux Telemetry**: Bypasses the vendor's Windows software application and heavy VM layers completely.
-- **Auto-Targeting Connection**: Bypasses spoofed interface endpoints and explicitly binds to the target hardware screen link (Interface 1).
-- **BCD Array Processing**: Translates live CPU telemetry data into the precise 3-byte BCD array format `[Hundreds, Tens, Ones]` required by the factory screen microchip.
-- **Automatic Recovery**: Safely catches `HIDException` or I/O transport data drops if a USB host transiently drops, cycling reconnection attempts automatically without crashing the script thread.
+Intel `coretemp` package readings and AMD `k10temp` Tdie readings are preferred. Other valid readings in those CPU groups are used as a fallback. ACPI thermal-zone readings are not assumed to measure the CPU. Missing, non-finite, or out-of-range temperatures are logged and updates are skipped; the daemon never substitutes an invented temperature. **During sensor failure, the panel may retain a stale reading.** Valid temperatures must be between 0 and 150°C.
 
-## 📋 Requirements
+The daemon retries connection failures with delays from 2 to 30 seconds, suppresses repeated identical errors, closes handles on failure, and handles SIGINT/SIGTERM shutdown. It does not reset USB devices or manually unbind kernel drivers. The installed `hidapi` backend may manage kernel driver ownership when opening a device.
 
-- **Linux Operating System** (Tested on Proxmox, Ubuntu, Debian)
-- **Root Privileges** (Required to write raw payloads directly to system `/dev/hidraw*` peripheral nodes)
-- **Astral `uv`** (Modern fast Python package tool wrapper used to host isolated environments instantly)
+## Setup
 
-## 🔧 Installation & Setup
+Requires Python 3.10+, `uv`, and USB device access. The supplied service runs as root. Install `uv` using its official installation instructions, then:
 
-### 1. Install `uv` on your System
-If you don't have `uv` installed, execute the official standalone installation script:
-```bash
-curl -LsSf https://astral.sh | sh
-```
-*(Restart your terminal window after installation so the `uv` toolpath becomes globally accessible).*
-
-### 2. Clone and Setup the Workspace
-Clone this repository to your computer and navigate into the target folder path:
 ```bash
 git clone https://github.com/njt1982/tzmrit-dgt-linux.git
 cd tzmrit-dgt-linux
+uv sync --locked
+sudo .venv/bin/python -u tzmrit_daemon.py
 ```
 
-### 3. Execution Test
-Run the script using `uv run`. The script relies on dependencies defined inside `pyproject.toml` (`hidapi` and `psutil`). `uv` will download and map these securely on the fly without making changes to your global operating system:
+Stop the foreground process with Ctrl+C before starting the service.
+
+For the supplied service, place the project at `/usr/local/bin/tzmrit-dgt-linux` and create its virtual environment there with `uv sync --locked`. The service runs that environment's Python directly; it does not install or resolve dependencies at boot.
+
 ```bash
-sudo uv run python3 tzmrit_daemon.py
-```
-*(Keep your terminal open—the screen will instantly wake up from its blank lock-state and begin matching your hardware core temperatures in real-time).*
-
----
-
-## ⚙️ Running permanently as a Background Daemon
-
-To configure this script to boot up automatically when your computer powers on without tying up an active terminal shell window, use the included Systemd service file wrapper:
-
-1. Copy your repository workspace to a permanent system location:
-```bash
-sudo cp -r . /usr/local/bin/tzmrit-dgt-linux
-```
-
-2. Link the template service manager script configuration file:
-```bash
-sudo cp /usr/local/bin/tzmrit-dgt-linux/tzmrit-daemon.service /etc/systemd/system/
-```
-
-3. Refresh system configurations and turn the daemon engine on:
-```bash
+sudo ln -s /usr/local/bin/tzmrit-dgt-linux/tzmrit-daemon.service /etc/systemd/system/tzmrit-daemon.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now tzmrit-daemon.service
+systemctl status tzmrit-daemon.service
+journalctl -u tzmrit-daemon.service -n 30
 ```
 
-4. Verify the active telemetry loop status:
+If a unit already exists, inspect it before replacing it. Changes to a linked unit require `daemon-reload`; Python changes require a service restart. Because the service runs as root, anyone who can edit its unit, Python source, or virtual environment can change code executed as root. A hardened installation should make those files root-owned and grant only the necessary device access.
+
+## Troubleshooting
+
+Stop the service before running a second instance. Enumerate the panel:
+
 ```bash
-sudo systemctl status tzmrit-daemon.service
+sudo .venv/bin/python -c 'import hid; print(hid.enumerate(0x1a2c, 0x4184))'
 ```
 
----
+Enumeration alone does not prove the interfaces can be opened. Check the USB configuration, interface driver bindings, and kernel logs. On the tested host, unsuccessful unbind/recovery experiments left the device unconfigured with `can't set config #1, error -32`; rebooting restored it. Do not unbind unrelated keyboard interfaces based solely on their manufacturer name.
 
-## 🛠️ Troubleshooting
+Inspect available temperatures:
 
-### Screen remains on 00 or displays a static figure
-1. Terminate your active tasks or service blocks:
 ```bash
-sudo systemctl stop tzmrit-daemon.service
+.venv/bin/python -c 'import psutil; print(psutil.sensors_temperatures())'
 ```
 
-2. Run an active hardware link check via Python to ensure your motherboard header claims it correctly:
+Additional CPU sensor families need explicit selection and validation in `get_cpu_temp()`.
+
+## Development
+
 ```bash
-sudo uv run --with hidapi python3 -c "import hid; print([d for d in hid.enumerate(0x1a2c, 0x4184)])"
+.venv/bin/python -m unittest discover -s tests -v
 ```
 
-3. Ensure no secondary virtual machine software instances (like VirtualBox or QEMU/KVM configs) have an active pass-through rule claiming the `1a2c:4184` device identity.
-
-### Sensor Not Found error loops
-The script searches standard Linux platform temperature sensor string arrays (`coretemp`, `k10temp`, `acpitz`). If your system uses a custom distribution configuration, find your exact sensor name via Python:
-```bash
-uv run --with psutil python3 -c "import psutil; print(list(psutil.sensors_temperatures().keys()))"
-```
-Open `tzmrit_daemon.py` and add your system's specific sensor key string directly to the lookup list inside the `get_cpu_temp()` function:
-```python
-for key in ['coretemp', 'k10temp', 'acpitz', 'YOUR_SENSOR_NAME_HERE']:
-```
-
----
-
-## 📄 License & Credits
-
-- Underlying protocol parameters deduced from reversing factory windows frameworks. 
-- Thanks to the Linux open-source cooling community for tracking device structures across budget internal USB devices.
-- Distributed under the MIT License. Feel free to modify and share!
+Tests use simulated devices and do not send USB messages. Confirm physical display behavior separately after protocol changes.

@@ -6,10 +6,9 @@ After=multi-user.target
 Type=simple
 User=root
 WorkingDirectory=/usr/local/bin/tzmrit-dgt-linux
-ExecStart=/usr/local/bin/uv run python3 tzmrit_daemon.py
+ExecStart=/usr/local/bin/tzmrit-dgt-linux/.venv/bin/python -u /usr/local/bin/tzmrit-dgt-linux/tzmrit_daemon.py
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-
